@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function Home() {
   const handleDownload = () => {
-    window.location.href = "/downloads/cling-astro.apk";
+    window.location.href = "/downloads/shynora-astro.apk";
   };
 
   return (
@@ -13,7 +13,7 @@ export default function Home() {
       <section className="w-full bg-gradient-to-r from-[#e53935] to-[#b71c1c] py-16 px-4 flex flex-col items-center justify-center text-center relative overflow-hidden">
         <div className="max-w-3xl z-10">
           <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-lg">
-            Cling Astro
+            Shynora Astro
           </h1>
           <h2 className="text-2xl md:text-3xl font-bold mb-6 text-blue-600 tracking-wide">
             MAKING YOUR ASTRO SHOPPING HAPPEN!
@@ -97,7 +97,7 @@ export default function Home() {
           Ready to Begin Your Journey?
         </h2>
         <p className="text-lg text-white/90 mb-8 max-w-2xl">
-          Download Cling Astro now and discover products that resonate with your
+          Download Shynora Astro now and discover products that resonate with your
           cosmic energy.
         </p>
         <button

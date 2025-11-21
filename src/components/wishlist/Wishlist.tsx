@@ -9,31 +9,122 @@ import { Card, CardContent } from '@/components/ui/card';
 import { X, Heart, ShoppingCart, Trash2 } from 'lucide-react';
 import { ProductDataProps } from '@/interfaces';
 import ctaBanner from '@/assets/banners/ctaBanner.png';
+import { authApi, isLoggedIn } from '@/lib/api';
 
 interface WishlistProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+// Helper function to check if a string is a valid MongoDB ObjectId
+const isValidObjectId = (id: string | number): boolean => {
+  if (typeof id === 'number') return false;
+  // MongoDB ObjectId is 24 hex characters
+  return /^[0-9a-fA-F]{24}$/.test(id);
+};
+
 const Wishlist: React.FC<WishlistProps> = ({ isOpen, onClose }) => {
   const { state: wishlistState, dispatch: wishlistDispatch } = useWishlist();
   const { dispatch: cartDispatch } = useCart();
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const handleAddToCart = (product: ProductDataProps) => {
-    cartDispatch({ type: 'ADD_TO_CART', payload: product });
+  const handleAddToCart = async (product: ProductDataProps) => {
+    const productId = (product.id || product._id || '').toString();
+    
+    // If user is logged in and productId is a valid MongoDB ObjectId, call API
+    if (isLoggedIn() && productId && isValidObjectId(productId)) {
+      try {
+        const response = await authApi.addToCart(productId, 1);
+        if (response.success) {
+          console.log('Product added to cart on backend');
+          // Add to local cart after successful API call
+          cartDispatch({ type: 'ADD_TO_CART', payload: product });
+        } else {
+          console.error('Failed to add to cart:', response.message);
+          // Still add to local cart
+          cartDispatch({ type: 'ADD_TO_CART', payload: product });
+          alert(`Added to cart locally. ${response.message || 'Could not sync with server.'}`);
+        }
+      } catch (error) {
+        console.error('Error adding to cart on backend:', error);
+        // Still add to local cart
+        cartDispatch({ type: 'ADD_TO_CART', payload: product });
+        alert('Added to cart locally. Could not sync with server.');
+      }
+    } else {
+      // User not logged in or productId is not a valid ObjectId, just add to local cart
+      if (!isLoggedIn()) {
+        console.log('User not logged in, cart item saved locally only');
+      } else if (!productId || !isValidObjectId(productId)) {
+        console.log('Product ID is not a valid MongoDB ObjectId, saving locally only');
+      }
+      cartDispatch({ type: 'ADD_TO_CART', payload: product });
+    }
   };
 
-  const handleRemoveFromWishlist = (id: number) => {
+  const handleRemoveFromWishlist = async (id: number) => {
     setIsAnimating(true);
-    setTimeout(() => {
+    const productId = id.toString();
+    
+    // If user is logged in and productId is a valid MongoDB ObjectId, call API
+    if (isLoggedIn() && isValidObjectId(productId)) {
+      try {
+        const response = await authApi.removeFromWishlist(productId);
+        if (response.success) {
+          console.log('Product removed from wishlist on backend');
+          // Remove from local wishlist after successful API call
+          wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: id });
+        } else {
+          console.error('Failed to remove from wishlist:', response.message);
+          // Still remove from local wishlist
+          wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: id });
+          alert(`Removed from wishlist locally. ${response.message || 'Could not sync with server.'}`);
+        }
+      } catch (error) {
+        console.error('Error removing from wishlist on backend:', error);
+        // Still remove from local wishlist
+        wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: id });
+        alert('Removed from wishlist locally. Could not sync with server.');
+      }
+    } else {
+      // User not logged in or productId is not a valid ObjectId, just remove from local wishlist
+      if (!isLoggedIn()) {
+        console.log('User not logged in, wishlist item removed locally only');
+      } else {
+        console.log('Product ID is not a valid MongoDB ObjectId, removing locally only');
+      }
       wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: id });
+    }
+    
+    setTimeout(() => {
       setIsAnimating(false);
     }, 200);
   };
 
-  const handleClearWishlist = () => {
+  const handleClearWishlist = async () => {
     wishlistDispatch({ type: 'CLEAR_WISHLIST' });
+    
+    // Sync with backend if logged in - remove each item
+    if (isLoggedIn()) {
+      try {
+        // Get current wishlist items before clearing
+        const currentItems = wishlistState.items;
+        // Remove each item from backend
+        for (const item of currentItems) {
+          try {
+            const productId = (item.id || item._id || '').toString();
+            if (productId) {
+              await authApi.removeFromWishlist(productId);
+            }
+          } catch (error) {
+            console.error('Error removing item from wishlist:', error);
+          }
+        }
+        console.log('Wishlist cleared on backend');
+      } catch (error) {
+        console.error('Error clearing wishlist on backend:', error);
+      }
+    }
   };
 
   if (!isOpen) return null;

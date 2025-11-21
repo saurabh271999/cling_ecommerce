@@ -15,7 +15,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h2 className="text-white text-4xl font-bold">Cling</h2>
+            <h2 className="text-white text-4xl font-bold">Shynora</h2>
             <p className="text-white text-sm">
               We create unique, sustainable, and stylish fashion, blending
               tradition with innovation. From luxury apparel to exclusive
@@ -91,7 +91,7 @@ const Footer = () => {
             <ul className="space-y-2 text-white">
               <li>Pune, Maharashtra</li>
               <li>+91 8767070762</li>
-              <li>info@clingmultisolutions.org</li>
+              <li>info@shynoramultisolutions.org</li>
             </ul>
 
             <div className="mt-6">
@@ -131,7 +131,7 @@ const Footer = () => {
 
         <div className="text-center text-white">
           <p>
-            Copyright © {getYear} Cling Multi Solutions All Rights Reserved.
+            Copyright © {getYear} Shynora Multi Solutions All Rights Reserved.
           </p>
         </div>
       </div>

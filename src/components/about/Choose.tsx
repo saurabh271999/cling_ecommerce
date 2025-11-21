@@ -28,7 +28,7 @@ const Choose = () => {
           </CardTitle>
           <CardDescription className="pt-4 text-base space-y-2 leading-relaxed">
             <p>
-              At Cling Multi Solution Ltd, we handpick rare and premium products
+              At Shynora Multi Solution Ltd, we handpick rare and premium products
               to elevate your lifestyle.
             </p>
             <p>

@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+// import Image from "next/image";
 import SearchComponent from "./Search";
-import ClingLogo from "@/assets/logo/Cling.png";
+// import ShynoraLogo from "@/assets/logo/Shynora.png";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { User, ShoppingBag, X, AlignCenter, Heart } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -15,7 +13,6 @@ import { useWishlist } from "@/contexts/WishlistContext";
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isSearchActive, setIsSearchActive] = useState<boolean>(false);
-  const router = useRouter();
   const { state: cartState } = useCart();
   const { state: wishlistState } = useWishlist();
 
@@ -27,13 +24,14 @@ const Navbar = () => {
       <div className="flex items-center justify-between px-4 py-4 mx-auto md:px-3 lg:px-12">
         <div className="flex items-center">
           <Link href="/">
-            <Image
-              src={ClingLogo}
-              alt="Cling Logo"
+            {/* <Image
+              src={ShynoraLogo}
+              alt="Shynora Logo"
               width={100}
               height={50}
               className="h-auto"
-            />
+            /> */}
+            <h1 className="text-2xl font-bold text-[#d3a212]">Shynora</h1>
           </Link>
         </div>
 
@@ -62,23 +60,12 @@ const Navbar = () => {
 
         {/* Desktop right-side content */}
         <div className="hidden md:flex items-center space-x-4">
-          <Button
-            variant="outline"
-            className="px-4 py-2 border-[#d3a212] text-black bg-[#f6ebc9] hover:bg-[#d3a212] hover:text-white"
-            onClick={() => router.push("/login")}
-          >
-            Login
-          </Button>
-          <Button
-            className="px-4 py-2 border-[#d3a212] text-white bg-[#d3a212] hover:bg-[#d3a312e8]"
-            onClick={() => router.push("/signup")}
-          >
-            Sign In
-          </Button>
-          <User
-            className="w-5 h-5 cursor-pointer hover:text-[#d3a212]"
-            aria-label="User Profile"
-          />
+          <Link href="/profile">
+            <User
+              className="w-5 h-5 cursor-pointer hover:text-[#d3a212]"
+              aria-label="User Profile"
+            />
+          </Link>
           <Link href="/cart" className="relative">
             <ShoppingBag
               className="w-5 h-5 cursor-pointer hover:text-[#d3a212]"
@@ -111,10 +98,12 @@ const Navbar = () => {
                 onToggle={toggleSearch}
                 isSearchActive={isSearchActive}
               />
-              <User
-                className="w-5 h-5 cursor-pointer hover:text-[#d3a212]"
-                aria-label="User Profile"
-              />
+              <Link href="/profile">
+                <User
+                  className="w-5 h-5 cursor-pointer hover:text-[#d3a212]"
+                  aria-label="User Profile"
+                />
+              </Link>
               <Link href="/cart" className="relative">
                 <ShoppingBag
                   className="w-5 h-5 cursor-pointer hover:text-[#d3a212]"
@@ -184,20 +173,6 @@ const Navbar = () => {
             >
               Watches
             </Link>
-            <div className="flex flex-col space-y-2 w-1/3">
-              <Button
-                className="btn-primary"
-                onClick={() => router.push("/login")}
-              >
-                Login
-              </Button>
-              <Button
-                className="btn-outline"
-                onClick={() => router.push("/signup")}
-              >
-                Sign In
-              </Button>
-            </div>
           </div>
         </div>
       )}

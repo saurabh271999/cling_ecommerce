@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { ProductDataProps } from '@/interfaces';
+import { authApi, isLoggedIn } from '@/lib/api';
 
 interface WishlistState {
   items: ProductDataProps[];
@@ -67,17 +68,57 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     totalItems: 0
   });
 
-  // Load wishlist from localStorage on mount
+  // Load wishlist from backend or localStorage on mount
   useEffect(() => {
-    const savedWishlist = localStorage.getItem('wishlist');
-    if (savedWishlist) {
-      try {
-        const wishlistData = JSON.parse(savedWishlist);
-        dispatch({ type: 'LOAD_WISHLIST', payload: wishlistData });
-      } catch (error) {
-        console.error('Error loading wishlist from localStorage:', error);
+    const loadWishlist = async () => {
+      // If user is logged in, try to load from backend first
+      if (isLoggedIn()) {
+        try {
+          const response = await authApi.getWishlist();
+          if (response.success && response.data?.wishlist) {
+            // Convert backend wishlist format to local format
+            const wishlistItems = response.data.wishlist.map((product: any) => ({
+              id: product._id || product.id,
+              productName: product.name || product.productName || 'Product',
+              productDescription: product.description || product.productDescription || '',
+              stars: product.rating || 4.5,
+              reviews: product.reviews?.length || 0,
+              itemsSold: 0,
+              price: product.originalPrice || product.price || 0,
+              discountedPrice: product.price || product.discountedPrice || 0,
+              discount: product.originalPrice && product.price ? 
+                Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0,
+              inStock: product.inStock !== false,
+              isLike: false,
+              images: product.images || [product.image] || [],
+              description: {
+                title: product.description || '',
+                moreDetails: []
+              },
+              review: []
+            }));
+            dispatch({ type: 'LOAD_WISHLIST', payload: wishlistItems });
+            return;
+          }
+        } catch (error) {
+          console.error('Error loading wishlist from backend:', error);
+          // Fall through to localStorage
+        }
       }
-    }
+      
+      // Fallback to localStorage
+      const savedWishlist = localStorage.getItem('wishlist');
+      if (savedWishlist) {
+        try {
+          const wishlistData = JSON.parse(savedWishlist);
+          dispatch({ type: 'LOAD_WISHLIST', payload: wishlistData });
+        } catch (error) {
+          console.error('Error loading wishlist from localStorage:', error);
+        }
+      }
+    };
+
+    loadWishlist();
   }, []);
 
   // Save wishlist to localStorage whenever state changes

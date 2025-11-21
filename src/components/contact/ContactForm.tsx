@@ -102,7 +102,7 @@ const ContactForm = () => {
               alt="Email"
               className="w-5 h-5 text-amber-500"
             />
-            <p className="ml-3 text-gray-600">info@clingmultisolutions.org</p>
+            <p className="ml-3 text-gray-600">info@shynoramultisolutions.org</p>
           </div>
         </div>
       </div>

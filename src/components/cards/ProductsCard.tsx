@@ -18,6 +18,7 @@ import {
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { ShoppingCart, Heart } from "lucide-react";
+import { authApi, isLoggedIn } from "@/lib/api";
 
 interface ProductsCardProps {
   data: CategoryCardProps[];
@@ -38,6 +39,8 @@ const ProductsCard: React.FC<ProductsCardProps> = ({ data }) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { dispatch: cartDispatch } = useCart();
   const { state: wishlistState, dispatch: wishlistDispatch } = useWishlist();
+  const [loadingCart, setLoadingCart] = useState<string | number | null>(null);
+  const [loadingWishlist, setLoadingWishlist] = useState<string | number | null>(null);
 
   useEffect(() => {
     if (!api) return;
@@ -69,7 +72,16 @@ const ProductsCard: React.FC<ProductsCardProps> = ({ data }) => {
     }
   };
 
-  const handleAddToCart = (product: CategoryCardProps) => {
+  // Helper function to check if a string is a valid MongoDB ObjectId
+  const isValidObjectId = (id: string | number): boolean => {
+    if (typeof id === 'number') return false;
+    // MongoDB ObjectId is 24 hex characters
+    return /^[0-9a-fA-F]{24}$/.test(id);
+  };
+
+  const handleAddToCart = async (product: CategoryCardProps) => {
+    setLoadingCart(product.id);
+    
     // Convert CategoryCardProps to ProductDataProps format
     const productData = {
       id: product.id,
@@ -92,14 +104,79 @@ const ProductsCard: React.FC<ProductsCardProps> = ({ data }) => {
       review: []
     };
     
-    cartDispatch({ type: 'ADD_TO_CART', payload: productData });
+    const productId = typeof product.id === 'string' ? product.id : product.id.toString();
+    
+    // If user is logged in and productId is a valid MongoDB ObjectId, call API
+    if (isLoggedIn() && isValidObjectId(productId)) {
+      try {
+        console.log('Adding to cart via API, productId:', productId);
+        const response = await authApi.addToCart(productId, 1);
+        
+        if (response.success) {
+          console.log('Product added to cart successfully on backend');
+          // Add to local cart context after successful API call
+          cartDispatch({ type: 'ADD_TO_CART', payload: productData });
+        } else {
+          console.error('Failed to add to cart:', response.message);
+          // Still add to local cart even if API fails
+          cartDispatch({ type: 'ADD_TO_CART', payload: productData });
+          alert(`Added to cart locally. ${response.message || 'Could not sync with server.'}`);
+        }
+      } catch (error) {
+        console.error('Error adding to cart on backend:', error);
+        // Add to local cart even if backend fails
+        cartDispatch({ type: 'ADD_TO_CART', payload: productData });
+        alert('Added to cart locally. Could not sync with server.');
+      }
+    } else {
+      // User not logged in or productId is not a valid ObjectId (static product), just add to local cart
+      if (!isLoggedIn()) {
+        console.log('User not logged in, cart item saved locally only');
+      } else {
+        console.log('Product ID is not a valid MongoDB ObjectId, saving locally only');
+      }
+      cartDispatch({ type: 'ADD_TO_CART', payload: productData });
+    }
+    
+    setLoadingCart(null);
   };
 
-  const handleToggleWishlist = (product: CategoryCardProps) => {
+  const handleToggleWishlist = async (product: CategoryCardProps) => {
     const isInWishlist = wishlistState.items.some(item => item.id === product.id);
+    const productId = typeof product.id === 'string' ? product.id : product.id.toString();
+    setLoadingWishlist(product.id);
     
     if (isInWishlist) {
-      wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: product.id });
+      // If user is logged in and productId is a valid MongoDB ObjectId, call API
+      if (isLoggedIn() && isValidObjectId(productId)) {
+        try {
+          console.log('Removing from wishlist via API, productId:', productId);
+          const response = await authApi.removeFromWishlist(productId);
+          if (response.success) {
+            console.log('Product removed from wishlist successfully on backend');
+            // Remove from local wishlist after successful API call
+            wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: product.id });
+          } else {
+            console.error('Failed to remove from wishlist:', response.message);
+            // Still remove from local wishlist
+            wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: product.id });
+            alert(`Removed from wishlist locally. ${response.message || 'Could not sync with server.'}`);
+          }
+        } catch (error) {
+          console.error('Error removing from wishlist on backend:', error);
+          // Still remove from local wishlist
+          wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: product.id });
+          alert('Removed from wishlist locally. Could not sync with server.');
+        }
+      } else {
+        // User not logged in or productId is not a valid ObjectId, just remove from local wishlist
+        if (!isLoggedIn()) {
+          console.log('User not logged in, wishlist item removed locally only');
+        } else {
+          console.log('Product ID is not a valid MongoDB ObjectId, removing locally only');
+        }
+        wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: product.id });
+      }
     } else {
       // Convert CategoryCardProps to ProductDataProps format
       const productData = {
@@ -123,8 +200,39 @@ const ProductsCard: React.FC<ProductsCardProps> = ({ data }) => {
         review: []
       };
       
-      wishlistDispatch({ type: 'ADD_TO_WISHLIST', payload: productData });
+      // If user is logged in and productId is a valid MongoDB ObjectId, call API
+      if (isLoggedIn() && isValidObjectId(productId)) {
+        try {
+          console.log('Adding to wishlist via API, productId:', productId);
+          const response = await authApi.addToWishlist(productId);
+          if (response.success) {
+            console.log('Product added to wishlist successfully on backend');
+            // Add to local wishlist after successful API call
+            wishlistDispatch({ type: 'ADD_TO_WISHLIST', payload: productData });
+          } else {
+            console.error('Failed to add to wishlist:', response.message);
+            // Still add to local wishlist
+            wishlistDispatch({ type: 'ADD_TO_WISHLIST', payload: productData });
+            alert(`Added to wishlist locally. ${response.message || 'Could not sync with server.'}`);
+          }
+        } catch (error) {
+          console.error('Error adding to wishlist on backend:', error);
+          // Still add to local wishlist
+          wishlistDispatch({ type: 'ADD_TO_WISHLIST', payload: productData });
+          alert('Added to wishlist locally. Could not sync with server.');
+        }
+      } else {
+        // User not logged in or productId is not a valid ObjectId, just add to local wishlist
+        if (!isLoggedIn()) {
+          console.log('User not logged in, wishlist item saved locally only');
+        } else {
+          console.log('Product ID is not a valid MongoDB ObjectId, saving locally only');
+        }
+        wishlistDispatch({ type: 'ADD_TO_WISHLIST', payload: productData });
+      }
     }
+    
+    setLoadingWishlist(null);
   };
 
   return (
@@ -183,14 +291,16 @@ const ProductsCard: React.FC<ProductsCardProps> = ({ data }) => {
                       size="sm"
                       className="flex-1 bg-[#d5a51a] hover:bg-[#b8941a] text-white"
                       onClick={() => handleAddToCart(products)}
+                      disabled={loadingCart === products.id}
                     >
                       <ShoppingCart className="w-4 h-4 mr-2" />
-                      Add to Cart
+                      {loadingCart === products.id ? 'Adding...' : 'Add to Cart'}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleToggleWishlist(products)}
+                      disabled={loadingWishlist === products.id}
                       className={`p-2 ${
                         wishlistState.items.some(item => item.id === products.id)
                           ? 'text-red-500 bg-red-50 border-red-200'

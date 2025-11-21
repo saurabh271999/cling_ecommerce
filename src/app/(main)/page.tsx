@@ -5,6 +5,7 @@ import ProductsCard from "@/components/cards/ProductsCard";
 import CutleryBanner from "@/components/banners/CutleryBanner";
 import Testimonial from "@/components/testimonial/Testimonial";
 import CircleCard from "@/components/cards/CircleCard";
+import LoginSignupModal from "@/components/auth/LoginSignupModal";
 
 import newProductsData from "@/constants/newProductsData";
 import kitchenwareData from "@/constants/kitchenwareData";
@@ -12,7 +13,9 @@ import watchesData from "@/constants/watchesData";
 
 export default function Home() {
   return (
-    <main>
+    <>
+      <LoginSignupModal />
+      <main>
       <CtaBanner />
       <CircleCard />
       <SubTitles
@@ -40,7 +43,8 @@ export default function Home() {
         title={"Our testimonial"}
         description="Discover our top collections of unique, stylish, and high-quality products curated just for you."
       />
-      <Testimonial />
-    </main>
+        <Testimonial />
+      </main>
+    </>
   );
 }

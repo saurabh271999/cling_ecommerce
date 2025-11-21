@@ -8,34 +8,126 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
 import ctaBanner from '@/assets/banners/ctaBanner.png';
+import { authApi, isLoggedIn } from '@/lib/api';
 
 interface CartProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+// Helper function to check if a string is a valid MongoDB ObjectId
+const isValidObjectId = (id: string | number): boolean => {
+  if (typeof id === 'number') return false;
+  // MongoDB ObjectId is 24 hex characters
+  return /^[0-9a-fA-F]{24}$/.test(id);
+};
+
 const Cart: React.FC<CartProps> = ({ isOpen, onClose }) => {
   const { state, dispatch } = useCart();
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const handleQuantityChange = (id: number, newQuantity: number) => {
+  const handleQuantityChange = async (id: number, newQuantity: number) => {
     if (newQuantity < 1) {
-      dispatch({ type: 'REMOVE_FROM_CART', payload: id });
+      await handleRemoveItem(id);
     } else {
-      dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity: newQuantity } });
+      const productId = id.toString();
+      
+      // If user is logged in and productId is a valid MongoDB ObjectId, call API
+      if (isLoggedIn() && isValidObjectId(productId)) {
+        try {
+          const response = await authApi.updateCartItem(productId, newQuantity);
+          if (response.success) {
+            console.log('Cart updated on backend');
+            // Update local cart after successful API call
+            dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity: newQuantity } });
+          } else {
+            console.error('Failed to update cart:', response.message);
+            // Still update local cart
+            dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity: newQuantity } });
+            alert(`Cart updated locally. ${response.message || 'Could not sync with server.'}`);
+          }
+        } catch (error) {
+          console.error('Error updating cart on backend:', error);
+          // Still update local cart
+          dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity: newQuantity } });
+          alert('Cart updated locally. Could not sync with server.');
+        }
+      } else {
+        // User not logged in or productId is not a valid ObjectId, just update local cart
+        if (!isLoggedIn()) {
+          console.log('User not logged in, cart updated locally only');
+        } else {
+          console.log('Product ID is not a valid MongoDB ObjectId, updating locally only');
+        }
+        dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity: newQuantity } });
+      }
     }
   };
 
-  const handleRemoveItem = (id: number) => {
+  const handleRemoveItem = async (id: number) => {
     setIsAnimating(true);
-    setTimeout(() => {
+    const productId = id.toString();
+    
+    // If user is logged in and productId is a valid MongoDB ObjectId, call API
+    if (isLoggedIn() && isValidObjectId(productId)) {
+      try {
+        const response = await authApi.removeFromCart(productId);
+        if (response.success) {
+          console.log('Item removed from cart on backend');
+          // Remove from local cart after successful API call
+          dispatch({ type: 'REMOVE_FROM_CART', payload: id });
+        } else {
+          console.error('Failed to remove from cart:', response.message);
+          // Still remove from local cart
+          dispatch({ type: 'REMOVE_FROM_CART', payload: id });
+          alert(`Item removed locally. ${response.message || 'Could not sync with server.'}`);
+        }
+      } catch (error) {
+        console.error('Error removing from cart on backend:', error);
+        // Still remove from local cart
+        dispatch({ type: 'REMOVE_FROM_CART', payload: id });
+        alert('Item removed locally. Could not sync with server.');
+      }
+    } else {
+      // User not logged in or productId is not a valid ObjectId, just remove from local cart
+      if (!isLoggedIn()) {
+        console.log('User not logged in, item removed locally only');
+      } else {
+        console.log('Product ID is not a valid MongoDB ObjectId, removing locally only');
+      }
       dispatch({ type: 'REMOVE_FROM_CART', payload: id });
+    }
+    
+    setTimeout(() => {
       setIsAnimating(false);
     }, 200);
   };
 
-  const handleClearCart = () => {
-    dispatch({ type: 'CLEAR_CART' });
+  const handleClearCart = async () => {
+    // If user is logged in, call API first
+    if (isLoggedIn()) {
+      try {
+        const response = await authApi.clearCart();
+        if (response.success) {
+          console.log('Cart cleared on backend');
+          // Clear local cart after successful API call
+          dispatch({ type: 'CLEAR_CART' });
+        } else {
+          console.error('Failed to clear cart:', response.message);
+          // Still clear local cart
+          dispatch({ type: 'CLEAR_CART' });
+          alert(`Cart cleared locally. ${response.message || 'Could not sync with server.'}`);
+        }
+      } catch (error) {
+        console.error('Error clearing cart on backend:', error);
+        // Still clear local cart
+        dispatch({ type: 'CLEAR_CART' });
+        alert('Cart cleared locally. Could not sync with server.');
+      }
+    } else {
+      // User not logged in, just clear local cart
+      dispatch({ type: 'CLEAR_CART' });
+    }
   };
 
   if (!isOpen) return null;

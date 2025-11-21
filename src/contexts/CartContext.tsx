@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { ProductDataProps } from '@/interfaces';
+import { authApi, isLoggedIn } from '@/lib/api';
 
 export interface CartItem {
   id: number;
@@ -123,17 +124,61 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     totalPrice: 0
   });
 
-  // Load cart from localStorage on mount
+  // Load cart from backend or localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        const cartData = JSON.parse(savedCart);
-        dispatch({ type: 'LOAD_CART', payload: cartData });
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+    const loadCart = async () => {
+      // If user is logged in, try to load from backend first
+      if (isLoggedIn()) {
+        try {
+          const response = await authApi.getCart();
+          if (response.success && response.data?.cart) {
+            // Convert backend cart format to local format
+            const cartItems = response.data.cart.map((item: any) => ({
+              id: item.product?._id || item.product?.id || item.product,
+              product: {
+                id: item.product?._id || item.product?.id || item.product,
+                productName: item.product?.name || item.product?.productName || 'Product',
+                productDescription: item.product?.description || item.product?.productDescription || '',
+                stars: item.product?.rating || 4.5,
+                reviews: item.product?.reviews?.length || 0,
+                itemsSold: 0,
+                price: item.product?.originalPrice || item.product?.price || 0,
+                discountedPrice: item.product?.price || item.product?.discountedPrice || 0,
+                discount: item.product?.originalPrice && item.product?.price ? 
+                  Math.round(((item.product.originalPrice - item.product.price) / item.product.originalPrice) * 100) : 0,
+                inStock: item.product?.inStock !== false,
+                isLike: false,
+                images: item.product?.images || [item.product?.image] || [],
+                description: {
+                  title: item.product?.description || '',
+                  moreDetails: []
+                },
+                review: []
+              },
+              quantity: item.quantity || 1
+            }));
+            dispatch({ type: 'LOAD_CART', payload: cartItems });
+            return;
+          }
+        } catch (error) {
+          console.error('Error loading cart from backend:', error);
+          // Fall through to localStorage
+        }
       }
-    }
+      
+      // Fallback to localStorage
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        try {
+          const cartData = JSON.parse(savedCart);
+          dispatch({ type: 'LOAD_CART', payload: cartData });
+        } catch (error) {
+          console.error('Error loading cart from localStorage:', error);
+        }
+      }
+    };
+
+    loadCart();
   }, []);
 
   // Save cart to localStorage whenever state changes
